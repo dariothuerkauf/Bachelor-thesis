@@ -1,0 +1,768 @@
+% Packages and Document Settings
+
+\documentclass[12pt,a4paper,titlepage,oneside,english]{article}
+
+%%% Main Packages %%%
+\usepackage[ngerman]{babel}
+%\usepackage[ngerman]{babel} % Use this option for German settings.
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+%%% Additional Packages %%%
+\usepackage{cite}
+\usepackage{framed}
+\usepackage{graphicx}
+\usepackage[german]{fancyref}
+\usepackage[german,hidelinks]{hyperref} %hidelinks
+\usepackage{multirow}
+\usepackage[round]{natbib}
+\usepackage{setspace}
+\usepackage{geometry}
+\usepackage{pst-all}
+\usepackage{pgfplots}
+
+%%% Math Packages %%%
+\usepackage{amsmath}
+\usepackage{amstext}
+\usepackage{amssymb}
+\usepackage{theorem}
+\usepackage{epsfig}
+\usepackage{longtable}
+
+
+%%% Layout Specifications %%%
+\geometry{a4paper, top=35mm, left=40mm, right=40mm, bottom=45mm,
+headsep=10mm, footskip=12mm}
+
+%%% Parskip Settings %%%
+\setlength{\parskip}{3mm}
+\setlength{\parindent}{0mm}
+
+%%% Document Specifications %%%
+\title{Bachelorarbeit}
+\author{Dario Thürkauf}
+
+%%%%%%%%%%%%%%%%%%
+%%% Title Page %%%
+%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+%\begin{titlepage}
+\begin{center}
+\vspace{1em}
+%\large{Bachelor Thesis}\\
+\large{Bachelorarbeit}\\
+\huge Vergleich der Constant Function Market Maker UniSwap, Balancer, Curve und Bancor \\
+\Large \vspace{1em}
+Dario Thürkauf
+\end{center}
+
+\vspace{1em}
+\normalsize
+\begin{flushleft}
+Betreut von:\\ 
+Prof. Dr. Fabian Schär \\
+Credit Suisse Asset Management (Schweiz) Professor for \\ 
+Distributed Ledger Technologies and Fintech \\
+Center for Innovative Finance, University of Basel
+\end{flushleft}
+
+\vspace{1em}
+\onehalfspacing
+\begin{center}
+\section*{Abstract}
+\end{center}
+%Kurze Übersicht was in dieser Arbeit alles gemacht wird. Der Abstract soll den Leser informieren und möglichst neugierig darauf machen, was in der Bachelorarbeit zu erwarten ist. Sinnvoll ist es dabei, explizit die Lesergruppen anzusprechen, für die der Text besonders geeignet ist. Der Abstract ist v. a. bei Master- und Bachelorarbeiten sprachlich nüchtern und sachlich zu halten. Den Leser interessieren v. a. folgende Fragen: Was sind die wichtigsten Ergebnisse? Welche Methodik wurde wie angewendet? Was sind die wichtigsten Schlussfolgerungen usw.? 
+
+In dieser Bachelorarbeit werden die Constant Function Market Maker Protokolle von UniSwap, Balancer, Curve und Bancor verglichen. Dieser Vergleich erfolgt anhand der jeweiligen Preisfunktion, dem Slippage, dem Bereitstellen und abziehen von Liquidität und dem Impermanent Loss. Der Fokus gilt dabei der mathematischen Umsetzung. In der Diskussion folgt ein Effizienzabgleich, bei dem die Auswirkungen der unterschiedlichen Implementierungen auf Liquiditätsprovider und Händler dargelegt werden. Schlussendlich wird das Front-Running Problem im Kontext von Constant Function Market Makers erörtert. \\
+
+%In dieser Bachelorarbeit werden die Prokolle verschiedener Constant Function Market Makers (CFMMs) verglichen. Im ersten Teil werden die unterschiedlichen Implementierungsvarianten anhand von UniSwap, Balancer, Curve und Bancor dargestellt. Der Fokus wird dabei vorallem auf die mathematische Umsetzung gelegt. Weiterhin werden die Auswirkungen dieser Unterschiede auf die Marktteilnehmer Händler, Liquiditätsprovider und Arbitrageure diskutiert. Zum Schluss folgt ein Effizienzabgleich, wobei ermittelt wird, welches Modell unter welchen Voraussetzungen zu den besten Ergebnissen für Liquiditätsprovider und Trader führt...
+
+\vfill
+\textbf{Keywords:} Decentralized Finance, Smart Contracts, dezentrale Tauschbörsen, Constant Function Market Makers, Liquidititätspools\\
+\noindent\textbf{JEL:} G15, G23
+
+%\end{titlepage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Inhaltsverzeichnis & Plagiatserklärung
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\pagenumbering{gobble}
+
+\newpage
+\pagenumbering{Roman}
+\tableofcontents
+
+\vfill
+\begin{center}
+\includegraphics[width=4cm]{logo_cif}
+\end{center}
+\singlespacing
+\vspace{-1.5cm}
+\section*{Plagiatserklärung}
+Ich bezeuge mit meiner Unterschrift, dass meine Angaben über die bei der Abfassung meiner Arbeit benutzten Hilfsmittel sowie über die mir zuteil gewordene Hilfe in jeder Hinsicht der Wahrheit entsprechen und vollständig sind. Ich habe das Merkblatt zu Plagiat und Betrug vom 22. Februar 2011 gelesen und bin mir der Konsequenzen eines solchen Handelns bewusst.\\
+
+%% YOUR NAME HERE %%
+Dario Thürkauf
+%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+\onehalfspacing
+\pagenumbering{arabic}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Introduction
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Einleitung}
+
+Decentralized Finance (DeFi) zeichnet sich durch die Unabhängigkeit von Intermediären und zentralen Instanzen aus. In den letzten Jahren gewann diese Blockchain-Anwendung zunehmend an Bedeutung \citep[S.1]{Schaer2020}.\\ Die Anzahl an digitalen Werteinheiten %in Form von Währungen, Nicht fungiblen Token (NFT) und persönlichen Token
+nimmt stetig zu \citep{Joel2020}. Stand November 2020 sind 7600 Kryptoassets auf Coinmarketcap gelistet. \footnote{www.coinmarketcap.com, Zugriff: 8.11.2020} Dies verdeutlicht die Notwendigkeit von Tauschbörsen für den Handel dieser Kryptoassets.\\
+Gemäss \cite{Schaer2020} sind zentrale Tauschbörsen zwar relativ effizient, verfügen aber über einige Nachteile. Ein Nutzer muss vor dem Handel seine Kryptoassets auf der Tauschbörse hinterlegen. Vertrauen gegenüber dem Anbieter ist erforderlich, da die direkte Kontrolle über die Assets abgegeben wird und der Anbieter diese für sich behalten oder verlieren könnte. Gleichzeitig bietet sich ein zentraler Angriffspunkt für Drittparteien. Zusätzlich ist die regulatorische Grundlage solcher Tauschbörsen oft unklar und einige mussten innert kurzer Zeit starke Skalierungsmassnahmen vornehmen. \citep[vgl.][S.8]{Schaer2020} \\ In der Vergangenheit gingen bei Hacks von populären Tauschbörsen wie Mt. Gox, Quadriga oder Bitfinex Kundengelder in Milliardenhöhe verloren \citep[S.1]{Angeris2019}. 
+Weitere Probleme von zentralen Tauschbörsen sind hohe Listungsgebühren sowie fehlende Liquidität für  Assets mit wenig Marktvolumen, wie beispielsweise persönliche Token \citep{Joel2020}.\\
+Dezentrale Tauschbörsen (DEX) versuchen diese Probleme zu lösen, wobei es eine Reihe unterschiedlicher Modelle gibt.
+%Dezentrale Tauschbörsen (DEX) versuchen diesen Problemen entgegenzuwirken. Es gibt eine Reihe unterschiedlicher Protokolle.
+Order Bücher sind laut \cite{Angeris2019} der dominante Lösungsansatz für Tauschbörsen im traditionellen Finanzsystem und können auch auf einer Blockchain mittels Smart Contracts (on-Chain) abgewickelt werden. \citep[vgl.][S.2]{Angeris2019}\\ Gemäss \citet{Schaer2020} wird dabei jede Order in einem Smart Contract gespeichert, unabhängig von Drittanbietern oder zusätzlicher Infrastruktur. Dieser Prozess  ist relativ langsam und teuer. Bereits die Intention zu Handeln kann Netzwerk-Gebühren erzeugen. Dieser Nachteil wiegt vorallem auf volatilen Märkten schwer, wo Gebote oft zurückgezogen werden. \citep[vgl.][S.9]{Schaer2020}\\
+Eine Alternative ist die Abwicklung von Order Büchern abseits der Blockchain (off-Chain). Die Blockchain dient dabei nur dem Settlement. Gegen eine Gebühr führen zentrale Anbieter Listen mit Angeboten. Die Anbieter führen weder die Trades aus, noch sind sie in Besitz der Kryptoassets. Sie sind somit nur für den Informationsaustausch zwischen Käufer- und Verkäufer zuständig, was das Sicherheitsrisiko reduziert.  Wettbewerb unter den Anbietern und die Offenheit des Protokolls stellen sicher, dass Abhängigkeiten vermieden werden. \citep[vgl.][S.8]{Schaer2020} \\ Doch auch dieses Modell ist laut \cite{Angeris2019} mit einigen Sicherheitslücken verbunden, weshalb Nutzer oft zusätzliche Sicherheitsmassnahmen treffen müssen \citep[S.2]{Angeris2019}.\\
+Peer-to-Peer (P2P) und Over-the-Counter (OTC) Protokolle ermöglichen bilateralen Handel zwischen zwei Parteien. Über das Netzwerk können Nutzer Gegenparteien für ihren Tausch suchen und Preise verhandeln. Dieser Prozess ist normalerweise automatisiert und off-Chain Indexes unterstützen bei der Preisfindung. \citep[vgl.][S.11]{Schaer2020} \\
+Bei Smart Contract basierten Reserve Aggregatoren werden Liquiditätsreserven von Liquiditätsprovidern in einem Smart Contract konsolidiert. Ein Nutzer kann eine Order dem Smart Contract senden, wobei dieser die verschiedenen Preise vergleicht und den besten aus Sicht des Nutzers akzeptiert. \citep[vgl.][S.10f.]{Schaer2020} %Probleme?
+
+\textbf{Smart Contract basierte Liquiditätspools}\\
+Laut \cite{Berenzon2020} geht der Begriff Automated Market Maker (AMM) auf die algorithmische Spieltheorie zurück. AMMs dienen der Informationsaggregation und finden Anwendung in Märkten, bei denen die Auszahlungen von einem zukünftigen Status abhängig sind. Ein Beispiel dafür sind Prognosemärkte.
+Eine spezielle Form von AMMs sind \textit{Constant Function Market Makers} (CFMM). Sie wurden für den dezentralen Austausch von digitalen Werteinheiten konstruiert. CFMMs sind algorithmische Agenten, welche vordefinierte Funktionen ausführen und als Resultat Liquidität für elektronische Märkte bereitstellen. Dies geschieht mithilfe von Smart Contract basierten Liquiditätspools. Diese halten Liquiditätsreserven von zwei oder mehr Kryptoassets und werden von einem Code kontrolliert. Nutzer handeln direkt gegen den Smart Contract, wobei der Preis intern über die definierte Funktion bestimmt wird. Ein zentraler Marktmacher wird dadurch nicht mehr benötigt und Spreads fallen weg. 
+Liquiditätspools können von beliebigen Personen, Liquiditätsprovider genannt, bereitgestellt werden. Dies wird mittels Schaffung von ökonomischen Anreizen erreicht. \citep{Berenzon2020}
+
+CFMMs haben einige vorteilhafte Eigenschaften: 
+\begin{itemize}
+	\item Nutzer bleiben im Besitz ihrer Kryptoassets, das Gegenparteirisiko entfällt. Beide Seiten des Tauschs finden atomar 			über eine einzelne Blockchain-Transaktion statt. \citep[vgl.][S.8]{Schaer2020}
+	\item Jede Person kann mit dem Smart Contract handeln oder Liquidität bereitstellen. Listungsgebühren fallen weg. 
+	Somit sind CFMMs zensurresistent und unterstützen auch Kryptoassets mit niedrigem Marktvolumen. \citep{Joel2020}
+	\item Im Gegensatz zu Order Büchern brauchen CFMMs weniger Speicherplatz. Der Status eines CFMMs kann durch die Anzahl der 			gepoolten Assets eindeutig repräsentiert werden. Dadurch sind sie einfacher auf der Blockchain zu bewirtschaften. \citep[vgl][S.3]{Angeris2019}
+	\item Öffentliches Protokoll: Die interne Logik der Applikation kann von jedem beobachtet werden und die Durchführung des Smart Contracts ist durch die Blockchain besichert \citep[vgl.][S.2]{Schaer2020}. Dies steht im Gegensatz zu Matching-Algorithmen bei zentralisierten Tauschbörsen, welche nicht öffentlich einsehbar sind \citep[vgl.][S.3]{Angeris2019}.
+	\item Smart Contracts können in weitere Applikationen integriert werden. CFMM können somit zentraler Bestandteil eines DeFi-Netzwerks werden, ohne die Dezentralität zu gefährden. \citep[vgl.][S.4]{Schaer2020}
+\end{itemize}
+
+Gemäss \citet{Schaer2020} gibt es eine Reihe unterschiedlicher Funktionen für CFMMs. Gemeinsamkeit aller Implementierungen ist die Anwendung einer konvexen Funktion. Ein Liquiditätspool mit dieser Eigenschaft kann immer Liquidität bereitstellen, da der relative Preis eines Tokens mit abnehmenden Reserven gegen Unendlich strebt. \citep[vgl.][S.9]{Schaer2020}\\
+Constant Product Market Makers, Constant Mean Market Makers, Hybrid Function Market Makers und Constant Reserve Market Makers sind Implementierungen, die bereits erfolgreich umgesetzt wurden und aus diesem Grund in Kapitel 2 verglichen werden. \\
+
+\begin{figure}[h!]
+\begin{tikzpicture}
+[ sibling distance =10em ,
+every node/.style = {shape=rectangle, rounded corners,
+	draw , align = center ,
+	top color=white, bottom color = blue!20}]]
+ \tikzstyle{level 1}=[sibling distance=40mm]
+ \tikzstyle{level 2}=[sibling distance=32mm]
+ \tikzstyle{level 3}=[sibling distance=23mm]
+  
+  \node {Tauschprotokolle}
+  	child { node {zentral}}
+  	child { node {dezentral}
+  		child { node {Orderbuch}
+  			child { node {on-Chain}}
+  			child { node {off-Chain}}}
+  		child { node {OTC/ P2P}}
+  		child { node {Reserven \\Aggregator}}
+  		child { node {CFMMs}}
+  		};
+\end{tikzpicture}
+\caption{Übersicht Krypto-Tauschprotokolle, Quelle: eigene Darstellung in Anlehnung an \citet[S.8-11]{Schaer2020}}
+\end{figure}
+
+\section{Protokolle}
+
+Es folgt die Betrachtung der Protokolle von UniSwap, Balancer, Curve und Bancor. Diese Protokolle werden anhand der zugrundeliegenden Funktionsgleichung, dem Slippage, dem Bereitstellen und Abziehen von Liquidität und dem Impermanent Loss verglichen. Die Begrifflichkeiten Slippage und Impermanent Loss werden ahnhand von UniSwap dargelegt.
+
+\subsection{UniSwap}
+
+UniSwap V2 ist ein Constant Product Market Maker \citep{Berenzon2020}. Das Protokoll ermöglicht den automatischen Tausch zwischen zwei beliebigen ERC20-Token und besteht aus einem Set an Smart Contracts. %wrapped ETH (wETH) und einem ERC20-Token oder einem beliebigen ERC20-Token Paar.
+Über den UniSwap Factory Kontrakt kann jeder Nutzer ein neues Tauschpaar erstellen. Der Factory Kontrakt führt Register über die bereits vorhandenen Paare, da es pro Paar nur einen UniSwap Exchange Kontrakt geben kann. Ein Exchange Kontrakt hält einen Liquiditätspool bestehend aus beiden Assets. Nutzer handeln gegen den Exchange Kontrakt. \citep{Adams2020} \\
+Die Tauschgebühr bei UniSwap beläuft sich momentan auf 0.3\%. Diese Gebühr wird nach dem Tausch dem Liquiditätspool hinzugefügt.\citep{Adams2020} \\ 
+Somit wächst mit jedem Tausch der Liquiditätspool um die Tauschgebühr, wie in \autoref{fig:Constant Product Funktion} veranschaulicht.
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=\textwidth]{Graphik CFMM}
+\caption{Constant Product Funktion, Quelle: \citet[S.10]{Schaer2020}}\label{fig:Constant Product Funktion}
+\end{center}
+\end{figure}
+
+\textbf{Funktionsgleichung}\\
+Der Preis für einen Tausch wird über die Constant Product Gleichung (\ref{eq:1}) bestimmt: \citep{Adams2020} 
+\begin{equation}
+x \cdot y = k \label{eq:1}
+\end{equation}
+$x$ steht für die Anzahl Token von Asset A und $y$ für die Anzahl Token von Asset B. $k$ wird aus dem Produkt von $x$ und $y$ berechnet und während einem Tausch konstant gehalten. Das Verhältnis zwischen den Token im Liquiditätspool bestimmt deren relativen Preis. Über Erweiterung von Gleichung (\ref{eq:1}) und unter Berücksichtigung der Handelsgebühr $f$ lässt sich die Anzahl Token $\Delta y$ berechnen, welche ein Nutzer für einen bestimmten Input $\Delta x$ erhält:
+\begin{align}
+(x+ (1-f)\Delta x)\cdot (y+ \Delta y) = k \\ 
+\Delta y = \dfrac{k}{x+ (1-f) \Delta x} - y \label{eq:2+3}
+\end{align}
+Für $\Delta x>0$ nimmt $\Delta y$ immer negative Werte an und umgekehrt. Durch einen Tausch wird die Reserve eines Assets erhöht, während die Reserve des anderen Assets schrumpft. \citep[S.10]{Schaer2020}\\
+Der effektive Preis für Token $x$ in Einheiten von Token $y$ bei einem Tausch ist: \citep{MartinelliMushegian2019}
+\begin{equation}
+EP_{x} = \dfrac{\Delta y}{\Delta x} \label{eq:4}
+\end{equation}
+\autoref{fig:Constant Product Funktion} zeigt den Funktionsgraphen der Constant Product Gleichung. Alle möglichen Verteilungen der Token im Liquiditätspool liegen auf $k$. Es gilt: Je geringer die Reserve eines Assets, desto höher dessen relativer Preis. Durch die Konvexität der Kurve ist es nicht möglich, ein Asset vollständig dem Pool zu entziehen \citep{Buterin2018}.
+Die Steigung des Graphen in einem bestimmten Punkt ist der Preis für einen indefinitesimalen Trade. Die Gleichung für den marginalen Preis  $SP_{x}$, nachfolgend Spot-Preis genannt, von Token $x$ in Einheiten von Token $y$ erhält man über partielle Ableitung der Constant Product Funktion (\ref{eq:1}): \citep[S.4]{Angeris2019} %Herleitung im Anhang
+\begin{equation}
+SP_{x} = \dfrac{y}{x} \label{eq:5}
+\end{equation}
+
+\textbf{Slippage}\\
+Der effektive Preis weicht bei einem Tausch vom Spot-Preis ab.
+Slippage ist definiert als die prozentuale Abweichung des effektiven Preis vom Spot-Preis: \citep{Martinelli2020}
+\begin{equation}
+SL = \dfrac{EP_{x}}{SP_{x}} - 1 \label{eq:6}
+\end{equation}
+Wobei $ SP_{x} = \lim\limits_{\Delta x, \Delta y \to 0} EP_{x} $ gilt. Durch einsetzen der Gleichungen (\ref{eq:4}) und (\ref{eq:5}) in (\ref{eq:6}) lässt sich zeigen, dass der Slippage abhängig von der Höhe des Inputs ($\Delta x$), sowie der Poolgrösse ($x$ und $y$) ist. Je höher der Input im Verhältnis zur Poolgrösse, desto höher der Slippage \citep{Berenzon2020}.\\
+
+
+\textbf{Liquidität bereitstellen und abziehen}\\
+Der initiale Liquiditätsprovider des Exchange Kontrakts kann das anfängliche Token-Verhältnis im Liquiditätspool beliebig festsetzen.  Rationale initiale Liquiditätsprovider werden Token im gleichen Wert dem Pool bereitstellen. Ansonsten weicht der relative Preis der Token im Pool vom Aussenmarkt ab und Arbitrageure können auf Kosten der Liquiditätsprovider risikolose Gewinne erzielen. Nachfolgende Liquiditätsprovider benutzen das Verhältnis zum Zeitpunkt ihres Deposits. \citep{Adams2020} \\ Liquiditätsprovider erhalten Liquiditätstoken für den Beitrag zum Liquiditätspool. Die Anzahl neu geschaffener $ LT_{neu}$ berechnet sich über: \citep{Adams2020} 
+\begin{equation}
+LT_{neu} = LT_{alt} \cdot \dfrac{\Delta A }{A} \label{eq:7}
+\end{equation}
+Wobei $LT_{alt}$ die Anzahl bereits vorhandener Liquiditätstoken, $\Delta A$ die vom Liquiditätsprovider beigesteuerte Anzahl Token $x$ und $A$ die bisherige Anzahl Token $x$ im Kontrakt ist.\\
+Liquiditätsprovider können jederzeit ihren proportionalen Anteil am Liquiditätspool abziehen. Dabei werden die Liquiditätstoken \glqq vernichtet\grqq . Das Verhältnis der erhaltenen Token entspricht dabei dem momentanen Allokationsverhältnis im Pool und kann vom Anfangsinvestment abweichen. Da bei dem Hinzufügen der Tauschgebühren zum Liquiditätspool keine neuen Liquiditätstoken geschaffen werden, sind in den abgezogenen Token ein proportionaler Anteil aller gesammelten Gebühren enthalten. \citep{Adams2020} 
+\newpage
+\textbf{Impermanent Loss}\\
+Verändern sich die relativen Preise der Pool-Token im Aussenmarkt, werden Arbitrageure gegen den Kontrakt handeln, bis der relative Pool-Preis dem Aussenmarkt entspricht. Wegen der Handelsgebühr kann eine kleine Abweichung bestehen bleiben. \citep[vgl.][S.4f.]{Angeris2019} \\
+Das Verhältnis der Token widerspiegelt die relative Nachfrage nach den Assets. Eine Preisveränderung zieht daher eine Veränderung der Token-Reserven im Pool nach sich. 
+Relativ zum Halten der Assets resultiert ein einseitiger Preisunterschied zwingend in einem Verlust. Dieser Verlust wird Impermanent Loss genannt, da er sich erst bei Abzug der Mittel vom Liquiditätspool materialisiert. \citep{Pintail2019}\\
+Die allgemeine Formel für den Impermanent Loss ausgedrückt in USD lautet: \citep{Martinelli2020}
+\begin{equation}
+IL = \dfrac{Pool Wert^{USD}_{neu}}{Haltewert^{USD}_{neu}}-1 \label{eq:8}
+\end{equation}
+%Wobei $\Delta Pool Wert_{USD}$ die Differenz des Poolwerts und $\Delta Haltewert_{USD}$ die Differenz der Tokenwerte in USD bei Halten der Assets ist.
+Für den Impermanent Loss in Abhängigkeit des Preisänderung der Token gilt somit: \citep{Martinelli2020} %siehe Anhang
+\begin{equation}
+IL =\dfrac{2 (\Delta P^{USD}_{x} \Delta P^{USD}_{y})^{0.5}}{\Delta P^{USD}_{x}+\Delta P^{USD}_{y}}-1 \label{eq:9}
+\end{equation}
+Wobei $\Delta P_{x,y}^{USD}$ definiert als $\tfrac{Preis_{neu}}{Preis_{alt}}$ der Token in US Dollar ist. Je stärker der relative Preisunterschied zwischen den Assets, desto höher der Impermanent Loss. Gemäss \cite{Pintail2019} ist der Impermanent Loss bei UniSwap unabhängig von der Richtung des relativen Preisunterschieds. %symmetrisch
+\citep{Pintail2019}
+
+%Graphik von Pintail
+%In der Folge passt sich der relative Preis im Liquiditätspool demjenigen des Aussenmarkts an und widerspiegelt die (relative) Nachfrage nach den Assets.  
+%Um Liquiditätsprovidern einen Anreiz für das Poolen ihrer Assets zu geben.
+%grosse Trades zahlen mehr Prämie, verschieben die Pools mehr..
+%Open Source, keine Listing fees, kein ICO, nichts von der Gebühr get an UniSwap, eine Art öffentliches Gut
+
+\subsection{Balancer}
+
+Balancer generalisiert die Constant Product Funktion von UniSwap auf Liquiditätspools mit bis zu 8 verschiedenen Token. Berenzon betitelt diese Implementierung \textit{Constant Mean Market Maker} \citep{Berenzon2020}.
+\newpage
+\textbf{Funktionsgleichung und Slippage}\\
+Der Preismechanismus wird über die Constant Value Funktion definiert: \citep{MartinelliMushegian2019} 
+\begin{equation}
+V = \prod B^{w_{t}}_{t} \label{eq:10}
+\end{equation}
+$V$ ist der Gesamtwert des Liquiditätspools und wird während einem Tausch konstant gehalten. Wiederum wird nach jedem Tausch die Handelsgebühr hinzugefügt. $B_{t}$ ist die Anzahl und $w_{t}$ das normalisierte Gewicht von Token $t$. \\ 
+Gemäss \citet{MartinelliMushegian2019} sollte $w_{t}$ dem Wertanteil eines Tokens $t$ im Verhältnis zum Wert des gesamten Liquiditätspools entsprechen. Vorausgesetzt Arbitrage findet statt und die Handelsgebühr ist tief. Die Summe aller normalisierten Gewichte $ \sum_{t} w_{t}$ ergibt 1. 
+Balancer Core Pools sind kontrolliert (privat) oder finalisiert (öffentlich). Kontrollierte Pools können von einer einzelnen Adresse konfiguriert werden. Diese Adresse kann Liquidität dem Pool hinzufügen oder abziehen, sowie die gepoolten Token-Typen und deren jeweilige Gewichte verändern. Über eine Einwegfunktion können kontrollierte Pools finalisiert werden. Finalisierte Pools haben fixierte Token-Typen, -Gewichte und Tauschgebühren. Der Pool wird dadurch für weitere Liquiditätsprovider zugänglich. Tauschgebühren werden bei einem Tausch und bei Abzug der Liquidität fällig. \citep{MartinelliMushegian2019} \\
+Der Spot Preis $SP_{i}$ (siehe \ref{sec:Herleitung Balancer Spot-Preis}) und effektive Preis $EP_{i}$ von Token $i$ in Einheiten Token $o$ ist: \citep{MartinelliMushegian2019}
+\begin{align}
+SP_{i} = \dfrac{\frac{B_{o}}{w_{o}}}{\frac{B_{i}}{w_{i}}}   && EP_{i}=\dfrac{A_{o}}{A_{i}}\label{eq:11} 
+\end{align} %\cdot \dfrac{1}{1-f}
+Index $i$ steht für die dem Pool hinzugefügten, $o$ für die vom Pool abgezogenen Token. $B$ sind die Pool-Reserven und $A$ die Anzahl der getauschten Token. Diese Formeln sind äquivalent zu den UniSwap Preis-Formeln (\ref{eq:4}) und (\ref{eq:5}), wo die Gewichte jeweils 0.5 sind und gekürzt werden können.\\
+Die Anzahl Token $A_{o}$, die man für den Input einer bestimmten Anzahl Token $A_{i}$ erhält, berechnet sich durch (siehe \ref{sec:Balancer Tausch-Formel}): \footnote{ohne Handelsgebühr} \citep{MartinelliMushegian2019}
+\begin{equation}
+A_{o} = B_{o} \cdot \Biggl(1-\biggl(\dfrac{B_{i}}{B_{i}+ A_{i}}\biggr)^{\tfrac{w_{i}}{w_{o}}}\Biggr) \label{eq:12} 
+\end{equation}
+Gleichung (\ref{eq:12}) lässt sich nach $A_{i}$ umstellen, um den nötigen Input für eine gewünschte Anzahl Output $A_{o}$ zu berechnen.\\
+Der Slippage definiert sich gleich wie in (\ref{eq:6}). Daher lässt sich schreiben: 
+%\begin{equation}
+%SL = \dfrac{\dfrac{A_{i}}{A_{o}}}{\frac{B_{i}}{w_{i}} / \frac{B_{o}}{w_{o}} } 
+%\end{equation} %\cdot \dfrac{1}{1-f}
+\begin{equation}
+SL= \dfrac{A_{o}}{A_{i}} \cdot \dfrac{B_{i}}{B_{o}} \cdot \dfrac{w_{o}}{w_{i}} -1 \label{eq:13}
+\end{equation}
+Der Slippage ist also abhängig von der Verteilung der Gewichte. Über einsetzen von (\ref{eq:12}) in (\ref{eq:13}) lässt sich der Slippage in Abhängigkeit des Inputs $A_{i}$ bei gegebenen Pool-Reserven und Gewichten berechnen. 
+
+\textbf{Liquidität bereitstellen und abziehen} \\
+Liquiditätsprovider können alle Token mit entsprechender Gewichtung oder nur einen einzigen Token öffentlichen Liquiditätspools hinzufügen. Wie bei UniSwap werden durch das Hinzufügen der Assets neue Liquiditätstoken geschaffen. Das Hinzufügen eines einzigen Tokens $A$ ist gleichzusetzen mit dem Poolen aller Token und dem sofortigen Tausch der restlichen Token zu Token $A$. Im Gegensatz zum Poolen aller Token beinhaltet das Hinzufügen eines einzigen Tokens Tauschgebühren. \citep{MartinelliMushegian2019}
+%Auf die Gleichungen für das hinterlegen und abziehen der Token in Balancer Pools wird bewusst verzichtet, da Sie für unseren Vergleich nicht von Bedeutung sind.
+
+\textbf{Impermanent Loss} \\
+Für die Berechnung des Impermanent Loss in einem Balancer Pool gilt Gleichung (\ref{eq:9}), generalisiert für n-Token: \citep{Martinelli2020}
+\begin{equation}
+IL = \dfrac{\prod_{t}(\Delta P^{USD}_{t})^{w_{t}}}{\sum_{t}(\Delta P^{USD}_{t} \cdot w_{t})}-1 \label{eq:14}
+\end{equation}
+$\Delta P^{USD}_{t}$ ist wiederum der Preisunterschied $\tfrac{Preis_{neu}}{Preis_{alt}}$ eines Tokens $t$ in US Dollar. %$w_{t}$ ist das Gewicht des Tokens im Pool.
+Der Impermanent Loss ist abhängig von den Gewichten der jeweiligen Token im Pool. %Martinelli zeigt, dass ein Pool bestehend aus zwei Token mit einer Gewichtung von 50/50 den Impermanent Loss maximiert. 
+
+\textbf{Balancer Smart Pools}\\
+Zusätzlich zu den bereits erwähnten Core Pools hat Balancer das Protokoll mit sogenannten Smart Pools erweitert. %wurde ein weiterer Pool-Typ dem Protokoll hinzugefügt, sogenannte Balancer Smart Pools.  
+Anstelle von fixierten Pool Parametern, wie bei finalisierten Pools, verfügen Smart Pools über die Möglichkeit die Pool-Parameter flexibel zu gestalten.
+Die veränderbaren Parameter sind gemäss \citet{Hoffman2020}:
+\begin{itemize}
+  \item{Token-Typen, Token-Gewichte, Tauschgebühr, zugelassene Liquiditätsprovider, maximaler Deposit Wert, Möglichkeit zu Handeln} %Start/Stop Handel
+\end{itemize}
+Diese Variablen können wiederum durch einen externen Smart Contract kontrolliert werden, was viele weitere Möglichkeiten eröffnet. Zwei beispielhafte Anwendungen sind gemäss \citep{Hoffman2020}:
+\begin{itemize}
+  \item[1.]{Dynamische Gebühren: Anpassung der Tauschgebühr an die Tausch-Nachfrage. Bei hoher Tauschnachfrage könnte die Tauschgebühr erhöht werden, bei tiefer Nachfrage verringert. Eine Implementierung dieser Art könnte den Ertrag für Liquiditätsprovider optimieren.}
+  \item[2.]{Initiale Token Distribution: Gewichtung des zu verteilenden Tokens beginnt hoch (bspw. 0.9) und sinkt über einen gewissen Zeitraum (bswp. 0.1 Schritte jeden Tag bis auf 0.1). Umgekehrt wird dem Pool eine beliebige Anzahl ETH hinzugefügt, dessen Gewicht steigt. Wenn niemand einen ETH gegen den Token tauscht, sinkt der Spot-Preis stetig. Beim Erwerben des Tokens steigt der Spot-Preis wiederum. Eine Distribution dieser Art kann also bei der Preisfindung eines neu emittierenden Tokens helfen und hat die Eigenschaften einer Dutch-Auktion. Ebenfalls sind die Kapitalerfordernisse für die Verteiler tief.}
+  \end{itemize}
+%Balancer erlaubt maximale Flexibilität bei der Pool-Gestaltung. Zu erwähnen sind zusätzliche Risiken, welche über das Zusammenspiel verschiedener Smart Contracts entstehen sowie eventuell zentralisierte Eigenschaften (bspw. bei Bezug der Daten über Orakel).
+%Beispielsweise könnte über die Tauschgebühr Surge Pricing Möglich gemacht werden oder über die Anpassung der Gewichte Liquidity Bootstrapping für neue Token.
+%Somit ist beispielsweise die Veränderung von Pool-Gewicht nach einer definierten Funktion möglich. \citep{Hoffman2020} 
+%Release von Smart Pools, Token Distribution Mechanismus (ICO über UniSwap)
+%Smart Pools können somit für dynamische Preissetzung und Liquidity bootstrapping eingesetzt werden. Liquidity bootstrapping pool
+%Besser als beispielsweise UniSwap, wo durch die fixierte Gewichtung von 50/50 der Token Preis bei einer einseitigen Verteilung stetig steigt.
+%Use Cases: Surge Pricing, Liquidity bootstrapping (pools)
+%dynamisches Preismanagement
+%Smart Pools are ‘smart’ because their internal operating functions are able to be defined by external contracts (which, according to the Protocol Sink Thesis, should be robots although they could also be human, centralized actors).
+%In other words, you could have a Balancer Pool set any possible parameters according to any code that you’re able to deploy to an external contract.
+
+%An interesting effect of having a flexible choice of weights for each token is that the pool liquidity provider can control what level of exposure they want to have to each asset.
+%For example, if they are bullish on MKR (relative to ETH), they can opt to add liquidity to a pool with a high weight in MKR and a low weight in ETH. Or they can create one if no such pool exists. This way, when MKR goes up relative to ETH, they are going to keep most of the MKR upside.
+%Granted: the upside won't be the same as holding 100\% 
+%MKR but it will be much better than having a 50/50 pool between MKR and ETH.
+\subsection{Curve}
+Stablecoins sind ein zentraler Bestandteil des DeFi Systems \citep[S.1]{Egorov2019}. Beispiele sind on-Chain kollaterlisierte DAI-Token oder off-Chain kollateralisierte und an den US-Dollar gebundene USDC oder USDT \citep[S.6]{Schaer2020}. \\ 
+Laut Egorov stieg durch das Aufkommen einer Vielzahl unterschiedlicher Stablecoins auch der Tauschbedarf über Constant Function Market Makers. Für inhärent volatile Assets %die über Constant Product- oder Constant Mean Market Maker Liquiditätspools getauscht werden. Um den Slippage zu minimieren, müssten Liquiditätspools genügend gross sein.
+birgt Slippage weniger Probleme als für Assets die preisstabil sein sollten.  Hoher Slippage führt zu tiefem Handelsvolumen. Tiefes Handelsvolumen führt zu geringeren Returns aus Handelsgebühren für Liquiditätsprovider, was wiederum die Poolgrösse negativ beeinflusst. Curve verwendet eine Kombination der Constant Sum- und Constant Product Funktion, um geeignete Eigenschaften für Liquiditätspools bestehend aus gegenseitig preisstabilen Assets zu erhalten. \citep[vgl.][S.1]{Egorov2019} \\ Dazu gehören neben Stablecoins auch Assets mit dem gleichen Underlying dazu, beispielsweise Bitcoin auf der Ethereum Blockchain (renBTC, wBTC, sBTC).
+Berenzon betitelt diese Implementierung \textit{Hybrid Constant Function Market Maker} \citep{Berenzon2020}.
+
+\begin{figure}[h!]
+\begin{center}
+%\hspace{-1.5cm}
+\includegraphics[width=\textwidth]{Graphik Curve}
+\caption{Curve Funktiongraph im Vergleich zu Constant Sum- und Constant Product Funktion, Quelle: \citet[S.3]{Egorov2019}}\label{fig:Curve}
+\end{center}
+\end{figure}
+
+\textbf{Funktionsgleichung}\\
+Die folgende Herleitung der Curve-Funktionsgleichung wurde von \citet[S.4f.]{Egorov2019} übernommen und dient zur Verdeutlichung der Eigenschaften verschiedener Funktionen von CFMMs.
+Die Constant Sum Funktion lautet: 
+\begin{equation}
+\sum x_{i}= D \label{eq:15} 
+\end{equation}
+Wobei $D$ die Summe aller Token $x_{i}$ ist, wenn diese den gleichen Preis haben. %gleiche Verteilung der Token im Pool
+%Im Fall von USD-Stablecoins sollte der effektive Preis $EP = $ 1 sein. 
+Der effektive Preis bei Constant Sum Funktionen ist konstant und verursacht daher keinen Slippage. Weicht der Aussenmarkt-Preis eines Tokens %in diesem Beispie) von 1 
+ab, werden Arbitrageure gegen diesen Kontrakt handeln und die Pool-Reserve eines Tokens vollständig entziehen. Ein Liquiditätspool mit diesem Preismechanismus kann nicht unbegrenzt Liquidität bereitstellen.
+Aus diesem Grund wird die bereits bekannte Constant Product Funktion benötigt, hier generalisiert für $n$ Token mit gleichen Preisen, benötigt:
+\begin{equation}
+\prod x_{i} = \biggl(\dfrac{D}{n}\biggr)^n \label{eq:16}
+\end{equation}
+Um beide Funktionen zu kombinieren, werden die Gleichungen (\ref{eq:15}) und (\ref{eq:16}) addiert:
+\begin{equation}
+\sum x_{i} + \prod x_{i} = D + \biggl(\dfrac{D}{n}\biggr)^n \label{eq:17}
+\end{equation}
+Es folgt die Multiplikation der Constant Sum Gleichung mit dem Koeffizienten $\chi$, genannt Leverage. Gilt $\chi$ = 0, ergibt sich die Constant Product Funktion. Wird $\chi$ erhöht, nähert sich die Gleichung einer Constant Sum Funktion an. $\chi$ sollte dimensionslos (d.h unabhängig von der Anzahl Token) sein, weshalb noch mit $D^{n-1}$ multipliziert wird. Daraus ergibt sich:
+\begin{equation}
+\chi D^{n-1}\sum x_{i} + \prod x_{i}=\chi D^n + \biggl(\dfrac{D}{n}\biggr)^n  \label{eq:18}
+\end{equation}
+Diese Gleichung gilt nur, wenn alle Token den gleichen Preis haben. %(d.h gleichmässig verteilt sind). 
+Um für Preisänderungen zu korrigieren wird $\chi$ dynamisch gemacht:
+\begin{equation}
+\chi = \dfrac{A \prod x_{i}}{(D/n)^n} \label{eq:19}
+\end{equation}
+$A$ ist eine Konstante und der sogenannte Amplifikationskoeffizient. %Der Amplifikationskoeffizient $A$ ist konstant und kann beliebig gesetzt werden.
+Je höher $A$ gesetzt wird, desto mehr ähnelt die Curve Funktion der Constant Sum Funktion.
+Bei gleichmässiger Verteilung der Token im Pool gilt: $\chi = A$. %Ist das Portfolio! in perfekter Balance.
+Sind die Token ungleichmässig verteilt, weichen die Preise von 1 ab, und der Leverage $\chi$ tendiert gegen 0. Die Funktion wird konvexer (krümmt) und nähert sich der Constant Product Funktion an. Der effektive Preis verändert sich durch einen Tausch und ein Asset kann nicht mehr vollständig aus dem Liquiditätspool entzogen werden. Einsetzen von $\chi$ in \ref{eq:18} führt über einige Zwischenschritte (siehe Anhang)%(Herleitung im Anhang) 
+zur Curve-Gleichung:
+\begin{equation}
+An^n\sum x_{i}+D = ADn^n + \dfrac{D^{n+1}}{n^{n} \prod x_{i}} \label{eq:20}
+\end{equation}
+Ist ein Liquiditätspool anfänglich festgelegt, wird D berechnet. D wird bei einem Tausch konstant gehalten. Die Anzahl der getauschten Token $x_{i}$ wird so verändert, dass Gleichung (\ref{eq:20}) erfüllt ist. 
+
+\textbf{Slippage}\\
+Der blaue Graph in \autoref{fig:Curve} zeigt die Curve-Funktion. Bei Token-Gleichgewicht (konstanten Preisen) ist die Funktion fast linear. In Richtung der Achsen wird die Funktion konvexer. Schwache Krümmung bedeutet tiefen Slippage, da der effektive Preis nicht stark vom Spot-Preis abweicht. Verändert sich das Preisverhältnis im Aussenmarkt und damit die Verteilung der beiden Token im Pool, beginnt sich der Funktionsgraph stärker zu krümmen und verursacht dadurch Slippage.  Gleichzeitig wird stetige Liquidität sichergestellt. Grundsätzlich sollten die Pool-Assets preisstabil bleiben. Wodurch erwartet wird, dass die Verteilung der Token im Pool im Gleichgewicht und der Slippage tief bleibt. \citep[vgl.][S.3f.]{Egorov2019}
+
+%Wie in \autoref{fig:Curve} zu sehen, ist die Curve-Funktion bei Token-Gleichgewicht (bei ähnlichen Preisen) nur schwach gekrümmt. Schwache Krümmung bedeutet tiefer Slippage, da der effektive Preis nicht stark vom Spot-Preis abweicht. Verändert sich das Preisverhältnis im Aussenmarkt und damit die Verteilung der beiden Token im Pool, beginnt sich der Funktionsgraph stärker zu krümmen und verursacht dadurch Slippage. bewegt man sich auf der Funktion in Richtung der Achsen. Die Kurve beginnt sich stärker zu krümmen und Trades verursachen Slippage. Gleichzeitig wird stetige Liquidität sichergestellt. Da Stablecoins preisstabil bleiben sollten, wird erwartet, dass die Verteilung der Token im Pool im Gleichgewicht und der Slippage dadurch tief bleibt.
+
+\textbf{Liquidität bereitstellen und Impermanent Loss}\\
+Gemäss \citet{charlie2020} können Liquiditätsprovider einen, mehrere oder alle vorhandenen Stablecoins eines Curve-Pools hinzufügen oder abziehen. Bei Deposit erhalten Liquiditätsprovider poolspezifische Liquiditätstoken.
+Wie bei UniSwap und Balancer erhalten Liquiditätsprovider einen proportionalen Anteil der Tauschgebühren. Diese Gebühr liegt momentan in allen Pools bei 0.04\%. Zusätzlich gibt es Pools, welche die Liquiditätstoken weiteren DeFi Lending Protokollen, wie Compound oder Aave hinzufügen um zusätzliche Rendite zu erzielen. \citep{charlie2020} \\
+Abbildung \ref{fig:Pool} zeigt die Verteilung der Stablecoins im Curve 3Pool \footnote{Quelle: www.curve.fi/3pool, Zugriff: 10.11.20}:\\
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=7cm]{Curve 3Pool}
+\caption{Zusammensetzung des Curve 3Pools} \label{fig:Pool}
+\end{center}
+\end{figure} 
+%\textit{Beispiel:} Fügt ein Liquiditätsprovider 1000 DAI dem Pool zu, werden diese umgehend in 163.7 DAI, 460.2 USDC und  376.1 USDT aufgeteilt. 
+Die Reserven im 3Pool sind ungleichmässig verteilt. 
+Curve schafft Anreize diesem Ungleichgewicht entgegenzuwirken. Laut \cite{Zhang2020}, ist die Tauschrate bei Trades, welche die Reserven wieder näher an das Gleichgewicht bringen, vorteilhaft. Gemäss \cite{charlie2020} erhalten Liquiditätsprovider einen Bonus für das Hinzufügen des Assets mit dem geringsten Anteil, sowie für das Abziehen des Assets mit dem höchsten Anteil.\\
+Impermanent Loss ist bei Curve-Pools kein zentrales Problem, da die Assets preisstabil bleiben sollten \citep{Reimi2020}.
+
+\subsection{Bancor}
+%Danach Bancor V2: Ziel, Eigenschaften, Probleme, Bancor V2.1. Alte Gleichung überholt (kurz ansprechen)
+Bancor V1 war zusammen mit UniSwap eine der ersten Implementierungen eines Constant Function Market Makers. Mittlerweile erfolgte mit Bancor V2 ein Protokoll-Update. Bancor selbst bezeichnet die neue Version als Dynamic Automated Market Maker \citep{Bancor2020}.
+Wichtigste Neuerung bei Bancor V2 ist die Anpassung der Ziel-Tokengewichte über ein Orakel. Dazu werden Orakel von Chainlink benutzt. \citep{Chainlink2020}\\
+Im Zentrum des Protokolls stehen Smart Token, die auf dem ERC-20 Token Standard basieren und über einen integrierten Liquiditätsmechanismus verfügen. Dieser stellt sicher, dass Smart Token immer gegen beliebige ERC20-Token oder ETH (Connector-Token) ausgetauscht werden können.  Dazu hat jeder Smart Token eine oder mehrere Verbindungen. Momentan einziger Smart Token ist der Bancor Network Token (BNT). 
+Die Verbindungen bilden Liquiditätspools bestehend aus dem Smart Token und dem Connector-Token.
+%Diese Verbindung ist vergleichbar mit einem UniSwap-Liquiditätspool und besteht aus der Smart Token Reserve, sowie der ERC20/ETH-Reserve (Connector-Token). 
+Smart Token können somit als Brücke für den Tausch zwischen verschiedenen Connector-Token genutzt werden. \citep[vgl.][S.5]{Hertzog2018}
+
+Beispiele:
+\begin{itemize}
+  \item{Smart Token Kauf: Der Käufer sendet den Connector-Token an den Smart Contract, dafür werden neue Smart Token geschaffen und direkt an den Käufer ausgeschüttet. Die Anzahl der Smart Token im Umlauf sowie die Anzahl Connector-Token in der Reserve erhöht sich.}
+  \item{Smart Token Verkauf: Der Verkäufer sendet den Smart-Token an den Smart Contract und erhält dafür eine bestimmte Anzahl Connector-Token. Die Anzahl Smart Token im Umlauf, sowie die Reserve des Connector-Tokens sinkt. }
+\end{itemize}
+\citep[vgl.][S.5f.]{Hertzog2018}\\
+
+\textbf{Funktionsgleichung} \\
+Die Funktionsgleichung für Bancor V2 ist nicht formal dokumentiert. Bancor V1 nutzte eine Constant Reserve Ratio (CRR) Gleichung. Dabei wurde ein konstantes Verhältnis $F$ zwischen der Reserve des Connector-Tokens $R$ und dem Gesamtwert ($S \cdot P$) des Smart Tokens beibehalten: \citep[vgl.][S.1]{Rosenfeld2017} \\%Marktkapitalisierung
+\begin{align}
+F = \dfrac{R}{S \cdot P}  \label{eq:21} 
+\end{align} % R = FSP &&		 P = \dfrac{R}{FS}
+$S$ ist die Anzahl und $P$ der Preis eines Smart Token im Umlauf. $F$ wird bei der initialen Konfiguration des Smart Tokens festgelegt und muss zwischen 0 und 1 liegen. \citet{Hertzog2018} bezeichnen $F$ als Connector-Gewicht. Der gewählte Wert für $F$ hat direkte Implikationen auf die Preisentwicklung des Smart Tokens. \citep[vgl.][S.9]{Hertzog2018}\\
+Die Gleichungen für den Kauf (\ref{eq:23}) und Verkauf (\ref{eq:24}) eines Smart Token (siehe \ref{sec:Bancor Tausch-Formel}) sind nachfolgend dargestellt. $T$ steht für Smart Token, $E$ für Connector Token. \citep[vgl.][S.2]{Rosenfeld2017}
+\begin{equation}
+T_{erhalten}  = S_{0} \cdot \Biggl(\biggl(1+\dfrac{E_{gesendet}}{R_{0}}\biggr)^{F} -1 \Biggr) \label{eq:23}
+\end{equation}
+\begin{equation}
+E_{erhalten} = R_{0} \cdot \Biggl(\biggl(1+\dfrac{T_{gesendet}}{S_{0}}\biggr)^{1/F} -1\Biggr) \label{eq:24}
+\end{equation}
+
+
+%Bancor V1 kurz ansprechen. 
+%Wie viele Smart- bzw. Connector Token ein Nutzer bei Kauf bzw. Verkauf erhält, berechnet sich über Constant Reserve Ratio (CRR) Gleichung (\ref{eq:21}), formalisiert durch \citet[S.1f.]{Rosenfeld2017}. Dabei wird ein konstantes Verhältnis $F$ zwischen der Reserve des Connector-Tokens $R$ und dem Gesamtwert $SP$ (Marktkapitalisierung) des Smart Tokens beibehalten: \citep[vgl.][S.1]{Rosenfeld2017} \\
+%\begin{align}
+%F = \dfrac{R}{SP} &&		 R = FSP &&		 P = \dfrac{R}{FS}  \label{eq:21}
+%\end{align}
+%$S$ ist die Anzahl und $P$ der Preis eines Smart Token im Umlauf. $F$ wird bei der initialen Konfiguration des Smart Tokens festgelegt und muss zwischen 0 und 1 liegen. Der gewählte Wert für $F$ hat direkte Implikationen auf die Preisentwicklung des Smart Tokens. \citep[vgl.][S.9]{Hertzog2018}\\
+%Gleichung (\ref{eq:22}) zeigt den Preis des Smart Tokens in Abhängigkeit des initialen Smart Token Preises $P_{0}$, sowie dem initialen ($S_{0}$) und momentanen ($S$) Smart Token Angebot. Herleitung im Anhang (Herleitung Bancor Formeln). \citep[S.2]{Rosenfeld2017} 
+%\begin{equation}
+%P = P_{0}  \biggl(\dfrac{S}{S_{0}}\biggr)^{\tfrac{1}{F}-1} \label{eq:22}
+%\end{equation}
+%Der Preis des Smart Token ist abhängig von dessen Nachfrage. \autoref{fig:Elastizität} zeigt die Auswirkung der Wahl von F auf die Preisentwicklung des Smart Tokens bei einem initialen Smart Token Preis von 1 und Anzahl von 1000 Einheiten. Der Verlauf der Kurve ist unabhängig von den gewählten Startparametern. F definiert somit die Preiselastizität eines Smart Tokens. %Ein tiefes F bedeutet hohe Preissensibilität, ein hohes F tiefe Preissensibilität. 
+%Ein Smart Token lässt sich nach den gewünschten Eigenschaften konfigurieren:\cite[vgl.][S.9f.]{Hertzog2018} 
+%\begin{itemize}
+%	\item[(a)] F = 1. Preis des Smart Token ist konstant und unabhängig von der Nachfrage. %The price is effectively pegged to its connected token balance and the Smart Token becomes a proxy for that value. 
+%	\item[(b)] F = 0.5. Preis des Smart Token steigt proportional zur Anzahl Smart Token im Umlauf. Der Smart Token Preis sinkt bei geringerer Nachfrage und steigt bei höherer Nachfrage. 
+%	\item[(c)] F = (0 ; 0.5) Smart Token Preis  steigt überproportional zum Smart Token Angebot. Hohe Preissensitivität.
+%	\item[(d)] F = (0.5 ; 1) Smart Token Preis steigt unterproportional zum Smart Token Angebot.  Tiefe Preissensitivität.
+%\end{itemize}
+%	\begin{figure}[h!]
+%	\begin{center}
+%	\includegraphics[width=12cm]{Graphik Preiselastizität}
+%	\caption{Preisentwicklung des Smart Tokens für verschiedene Werte von F(CRR), Quelle: \citet[S.9]{Hertzog2018}}%\label{fig:Elastizität}
+%	\end{center}
+%	\end{figure} 
+%Aus (\ref{eq:22}) lassen sich die Gleichungen für den Kauf (\ref{eq:23}) und Verkauf (\ref{eq:24}) eines Smart Token ableiten. $T$ steht für Smart Token, $E$ für Connector Token: \citep[S. 2]{Rosenfeld2017}
+%\begin{equation}
+%T_{erhalten}  = S_{0} \cdot \Biggl(\biggl(1+\dfrac{E_{gesendet}}{R_{0}}\biggr)^{F} -1 \Biggr) \label{eq:23}
+%\end{equation}
+%\begin{equation}
+%E_{erhalten} = R_{0} \cdot \Biggl(\biggl(1+\dfrac{T_{gesendet}}{S_{0}}\biggr)^{1/F} -1\Biggr) \label{eq:24}
+%\end{equation}
+
+\textbf{Slippage}\\
+%Die Gleichungen für den effektiven- und den Spot-Preis eines Smart Tokens, ausgedrückt in Einheiten Connector-Token lauten wie folgt: \citep[vgl.][S.8/12]{Hertzog2018}
+%\begin{align}
+%EP_{T} = \dfrac{E_{gesendet}}{T_{erhalten}} && P = \dfrac{R_{0}}{FS_{0}}  \label{eq:25/26} 
+%\end{align}
+%Der Spot-Preis (hier $P$) vor dem Trade ergibt sich aus der Constant Reserve Ratio Gleichung (\ref{eq:21}).
+%Jeder Kauf bzw. Verkauf verändert den Smart Token Spot-Preis. Der effektive Smart Token Preis weicht vom Spot Preis vor dem Trade ab. Daher gibt es auch bei Bancor Slippage. Dieser lässt sich wiederum mit Gleichung (\ref{eq:6}) berechnen. \\
+Laut Schachav benutzt Bancor V2 einen Mechanismus zur Liquiditäts-Amplifikation. Die genaue Funktionsweise ist ebenfalls nicht dokumentiert. Vereinfacht gesagt können die Pool-Reserven in einer gewissen Preisregion künstlich erhöht werden, wodurch der Slippage bei einem Tausch verringert werden soll. \citep{Shachav2020}
+
+%Bancor V2 expands this low-slippage model to volatile assets through a similar mechanism that dynamically updates the pool’s reserve weights to hold the value of reserves at a 1:1 ratio. Liquidity can be amplified within common price regions, while preserving crucial incentives for arbitrageurs to re-balance the pool.
+
+\textbf{Liquidität bereitstellen}\\
+Bancor V2 bietet Liquiditätsprovider die Möglichkeit, ein einzelnes Asset dem Pool hinzuzufügen. Liquiditätsprovider müssen daher nicht mehr zwingend den Smart Token besitzen. Aus diesem Grund wird pro Pool-Asset ein separater Liquiditätstoken geschaffen. Bei einem einseitigen Token-Deposit erhöht sich das Pool-Gewicht des Tokens proportional. Da die Gebühren aber unabhängig von der momentanen Pool Gewichtung auf beide Liquiditätstoken gleichmässig aufgeteilt werden, gibt es den Anreiz für Liquiditätsprovider das Asset mit dem tieferen Gewicht dem Pool hinzuzufügen. \citep{Shachav2020}
+
+\textbf{Impermanent Loss}\\
+In Bancor V2 verändert ein Pool seine internen Gewichte proportional zu allen Liquiditäts- sowie Preisänderungen. Verändert sich der Preis eines Assets auf dem Aussenmarkt, wird dies von den Orakeln erkannt und die Ziel-Gewichte der beiden Token entsprechend angepasst, damit der interne Preis dem Aussenmarkt-Preis entspricht. Die Arbitragemöglichkeit entfällt. Arbitrageure können somit nicht mehr auf Kosten der Liquiditätsprovider dem Pool Wert entziehen und der Impermanent Loss wird eliminiert. Einzig bei Veränderungen der Pool-Verteilungen durch Trades werden Arbitrageure benötigt, um den Pool wieder in die vom Orakel definierten Ziel-Gewichte zu bringen. \citep{Chainlink2020} 
+
+\section{Diskussion}
+Bisher wurden die verschiedenen Implementierungen bezüglich Preisfunktion, Slippage, dem Bereitstellen von Liquidität sowie Impermanent Loss dargestellt. In diesem Kapitel werden die wichtigsten Unterschiede in Bezug auf Slippage und Impermanent Loss herausgestrichen und die Auswirkungen auf Händler und Liquiditätsprovider betrachtet. %Gleichzeitig erfolgt ein Effizienzabgleich, wobei ermittelt wird, welches Modell unter welchen Voraussetzungen zu den besten Ergebnissen für LP und Trader führt. 
+Zum Abschluss der Diskussion wird das Front-Running Problem im Kontext mit CFMMs diskutiert.\\
+
+\begin{table}[h!]
+\renewcommand{\arraystretch}{1.5}
+  \center
+  \begin{tabular}{cccc}
+    \hline\hline\
+    Protokoll & Funktionsgleichung & Art der Funktion & Token pro Pool \\ \hline
+    UniSwap & $ x \cdot y=k$ & Constant Product &  2  \\    
+    Balancer & $V=\prod B_{i}^{w_{i}}$ & Constant Mean  & 2-8 \\ 
+    Curve & $s \cdot \sum x_{i}+\prod x_{i} = k $ & Constant Sum/-Product & 2-4  \\
+    Bancor & $F=R/SP$ & Constant Product & 2 \\
+    \hline\hline
+  \end{tabular}
+  \caption{Übersicht der Protokoll-Funktionen, eigene Darstellung}
+  \label{tbl:Protokolle}
+\end{table}
+\subsection{Slippage}
+Für Händler ist der Slippage im Vergleich der unterschiedlichen CFMMs neben der Handelsgebühr von grösster Bedeutung. Die folgende Diskussion bezieht sich einzig auf die zugrundeliegenden Preisfunktion. Die Poolgrösse der verschiedenen Protokolle wird ausser Acht gelassen.\\
+Mit der Kombination von Constant Sum- und Constant Product Funktion minimiert Curve den Slippage für einen gewissen Preisbereich der im Pool enthaltenen Assets. Dieser Bereich ist abhängig von der Wahl von $A$. Verändern sich die Preise der Pool-Token im Aussenmarkt, wird sich die Zusammensetzung des Pool verändern. Wie in \autoref{fig:Curve} zu sehen ist, kann die Krümmung und damit der Slippage bei einem Curve-Tausch im Ungleichgewicht höher sein als bei UniSwap.\\
+Abgesehen von der Curve-Funktion, wird gemäss \cite{Martinelli8020} der Slippage bei Tausch zwischen Token mit gleichem Pool-Gewicht minimiert. \citep{Martinelli8020} \\ \autoref{fig:Slippage in Abhängigkeit des Pool Gewichts von Token A} zeigt den Slippage in Abhängigkeit des relativen Gewichts der gehandelten Token. \\
+	\begin{figure}[h!]
+	\begin{center}
+	\includegraphics[width=10cm]{Graphik Slippage}
+	\caption{Slippage in Abhängigkeit des relativen Token Gewichts, Quelle: \citet{Martinelli8020} }\label{fig:Slippage in Abhängigkeit des Pool Gewichts von Token A}
+	\end{center}
+	\end{figure}
+	
+Beispiel: Pool mit einer Verteilung der Token-Gewichte von $A$ = 0.4, $B$ = 0.4, $C$ = 0.1 und $D$ = 0.1. Bei einem Handel von A mit B ist das relative Gewicht 50\% und der Slippage tiefer als bei einem Handel zwischen A und C mit einem relativen Token-Gewicht von 80\%. \citep{Martinelli8020}\\
+Wenn man von der relativen Grösse eines Trades gegenüber des Pools absieht, lässt sich für Händler zusammenfassen:\\
+Curve ist die beste Option für den Tausch von Stablecoins, der Slippage ist gering und die Handelsgebühr beläuft sich momentan in allen Pools auf 0.04\%. \\
+Ein Tausch über UniSwap oder zwischen zwei gleichgewichteten Token über Balancer ist in Bezug auf Slippage äquivalent. Bei beiden Protokollen lässt sich der Slippage nicht vollständig eliminieren. UniSwap hat eine Tauschgebühr von 0.3\%, während bei Balancer-Pools die Gebühr flexibel festgelegt werden kann. Die Entscheidung hängt somit von der Höhe der Gebühren ab. Ein Tausch zwischen zwei ungleichgewichteten Token über Balancer hat den höchsten Slippage.\\
+Ein Tausch über Bancor V2 sollte gemäss \citet{Shachav2020} aufgrund des Amplifikationsmechanismus niedrigeren Slippage als UniSwap und Balancer verursachen.
+
+\subsection{Impermanent Loss}
+Für Liquiditätsprovider ist neben dem Handelsvolumen und zusätzlichen Pool-Anreizen %(weitere Lending Protokolle, Protokoll-Token) 
+der Impermanent Loss zentral.
+\autoref{fig:Impermanent Loss für verschiedene Pool Gewichte} veranschaulicht die Höhe des Impermanent Loss für Pools bestehend aus zwei Assets mit unterschiedlichen Gewichtungen.
+	\begin{figure}[h!]
+	\begin{center}
+	\includegraphics[width=\textwidth]{Graphik Impermanent Loss}
+	\caption{Impermanent Loss für verschiedene Pool Gewichte, Quelle: \citet{Martinelli8020}}\label{fig:Impermanent Loss für verschiedene Pool Gewichte}
+	\end{center}
+	\end{figure}
+\newpage
+Die x-Achse bildet den relativen Preisunterschied der beiden Token ab. Wie bereits in Kapitel 2.1 angesprochen, führt ein einseitiger Preisunterschied immer zu Impermanent Loss bei Abzug von Liquidität. Ein Liquiditätspool mit einer Gewichtung von je 50\% maximiert den Impermanent Loss. \citep{Martinelli8020}\\
+UniSwap Liquiditätsprovider erfahren den höchsten Impermanent Loss.
+Bei Balancer Liquiditätspools lassen sich die Token-Gewichte beliebig festlegen. Liquiditätsprovider können damit die Korrelation gegenüber einem Asset erhöhen oder reduzieren.  Bei starker Gewichtung behält ein Liquiditätsprovider den Upside einer positiven Preisveränderung und kann gleichzeitig Handelsgebühren aus dem Pool einsammeln. Auch bei einer negativen Preisveränderung ist der Verlust geringer als bei einem 50/50 Pool.  
+Jedoch bedeutet stärkere Gewichtung eines Tokens ebenfalls mehr Slippage, wodurch das Handelsvolumen und damit Gebühren für Liquiditätsprovider sinken. \citep{Martinelli8020} \\
+Bei Curve Liquiditätspools ist Impermanent Loss nicht von zentraler Bedeutung, da die Assets preisstabil bleiben sollten und der relative Preisunterschied nur gering ist. \\ Bancor V2 versuchte den Impermanent Loss mittels stetiger Anpassung der Token Gewichte über Orakel zu eliminieren \citep{Chainlink2020}. Laut \citet{Shevchenko2020} dauert die Aktualisierung über die Orakel zu lange und Front-Running ist möglich. Aus diesem Grund ist Bancor von der ursprünglichen Lösung abgerückt und hat mit Version 2.1 eine Impermanent Loss Versicherung eingeführt. \citep{Shevchenko2020}
+
+%Umgekehrt ist er bei tiefer Gewichtung eines Tokens weniger stark von einer relativen Preisänderung betroffen.
+%Ist die Preisveränderung negativ, erhöht sich der Verlust verglichen mit einem 50/50 Pool.
+
+\subsection{Front-Running Problem bei CFMMs}
+Bisher galt die Annahme, dass die Interaktion der Nutzer mit den Smart Contracts und der Ethereum Blockchain problemlos funktioniert. In der Realität gibt es noch einige Probleme bei DeFi-Applikationen. Eines der Hauptprobleme ist \glqq Front Running\grqq .\\
+Front-Running bezeichnet allgemein das Ausnützen einer (privaten) Information, die den Preis eines Assets ändern könnte, für finanziellen Gewinn \citep[S.1]{Zhou2020}.
+Es kann beispielsweise durch sogenannte Arbitrage Bots durchgeführt werden. Diese identifizieren profitable Transaktionen aus dem Ethereum-Mempool und verändern die Adresse zu der eigenen. Über Erhöhung der Transaktionsgebühr wird versucht die eigene Transaktion vor der Original-Transaktion in einem Block zu inkludieren und den Profit selbst in Anspruch zu nehmen. \citep{Robinson2020} \\
+Im Kontext von CFMMs gibt es sogenannte \glqq Sandwich-Attacken\grqq . Das folgende Beispiel ist angelehnt an \citet{Buterin2018} und zeigt den Ablauf einer Sandwich-Attacke durch einen Miner.
+\begin{itemize} \item[1.] Ausgangslage: UniSwap Liquiditätspool bestehend aus 10 Einheiten Token A und 10 Einheiten Token B.  Ein Nutzer will eine Einheit A gegen B tauschen. Miner sieht die pendente Transaktionsnachricht in seinem Mempool und verfasst zwei eigene Transaktionsnachrichten, die er vor und nach der ursprünglichen Transaktion im Block platziert.
+	\item[2.] Front-Run Transaktion: Miner sendet eine Einheit A und erhält dafür 0.9091 Einheiten von B.
+	\item[3.] Ursprungstransaktion: Nutzer sendet eine Einheit A, erhält dafür 0.757576 Einheiten B.
+	\item[4.] Back-Run Transaktion: Miner sendet 0.7576 Einheiten von B und erhält 1 Einheit A.	
+	\item[5.] Profit für den Miner: 0.9090 B - 0.7575 B = 0.1515 B auf Kosten des Nutzers, der anstatt 0.9090 nur 0.7575 Einheiten von B erhält.
+\end{itemize}
+\begin{table}[h!]
+  \center
+  \begin{tabular}{|c|cccc|}       
+    \hline
+    Aktion & Anzahl A & Anzahl B & Konstante & gesendet $\rightarrow$ erhalten \\ \hline
+    1. & 10 & 10 & 100 & - \\    
+    2. & 11 & 9.0909  & 100  & 1 A $\rightarrow$ 0.9090 B \\ 
+    3. & 12 & 8.3333 & 100 & 1 A $\rightarrow$ 0.7575 B \\
+    4. & 11 & 9.0909 & 100 & 0.7575 B $\rightarrow$ 1 A \\
+    \hline
+  \end{tabular}
+  \caption{Veränderung der Pool Reserven bei Sandwich-Attacke, eigene Darstellung in Anlehnung an \citet{Buterin2018} }
+  \label{tbl:Sandwich}
+\end{table}
+Der Miner nützt die (öffentliche) Information über den unbestätigten Trade aus. Er verändert mit der Front-Run Transaktion die Pool-Reserven, der effektive Preis für den Nutzer verschlechtert sich. Mit der Back-Run Transaktion wird der Pool wieder näher an das Gleichgewicht gebracht, wodurch der Miner einen besseren effektiven Preis erhält. Er nutzt die Arbitrage-Möglichkeit direkt selber.
+Ein einfacher Schutz der bereits von UniSwap und anderen CFMMs implementiert wurde, ist die Definition des maximalen Slippage bei Abgabe eines Trades durch den Nutzer.  Liegt der Slippage über dem definierten Wert, wird die Transaktion nicht ausgeführt. Diese Möglichkeit sollte aufgrund der anfallenden Transaktionsgebühren für den Angreifer den Anreiz für Sandwich-Attacken merklich senken. (Quelle) Die Diskussion weiterer Lösungsansätze würde den Umfang dieser Arbeit übersteigen. 
+
+\section{Zusammenfassung}%Zusammenfassen, Interpretation der Ergebnisse, Ausblick
+
+%Fragestellung %Diskussion der Ergebnisse
+
+In dieser Arbeit wurden die Constant Function Market Maker-Protokolle UniSwap, Balancer, Curve und Bancor formal verglichen. \\
+Die Einleitung lieferte einen Gesamtüberblick verschiedener Methoden für Krypto-Tauschbörsen. Smart Contract basierte Liquiditätspools wurden anderen DEX-Methoden gegenübergestellt und die jeweiligen Vor- und Nachteile besprochen.
+Im Hauptteil lag der Fokus auf dem Vergleich der verschiedenen CFMM Implementierungen. Zentrale Begrifflichkeiten wie Slippage und Impermanent Loss wurden anhand von UniSwap eingeführt und für jedes Protokoll einzeln dargestellt. Des weiteren wurden die zugrundeliegenden Protokoll-Funktionsgleichungen und das Bereitstellen und Abziehen von Liquidität verglichen. 
+Anschliessend folgte ein Effizienz-Abgleich in Bezug auf Slippage und Impermanent Loss, indem die Auswirkungen für Händler und Liquiditätsprovider diskutiert wurden. Zum Schluss folgte die Erläuterung des Front-Running Problems mittels Ablaufbeispiel einer Sandwich-Attacke. 
+
+Krypto-Tauschbörsen können zentral oder dezentral abgewickelt werden. Zentrale Tauschbörsen sind effizient, aber nicht wirklich geeignet im Zusammenhang mit der dezentralen Infrastruktur einer Blockchain. Constant Function Market Makers zeichnen sich gegenüber anderen dezentralen Tausch-Protokollen durch interne Preisfindung und Sicherstellung stetiger Liquidität aus. Allenvoran wird kein Order-Buch benötigt. An dieser Stelle ist zu erwähnen, dass es sich um Open-Source Protokolle handelt, wodurch sie problemlos kopiert werden können. SushiSwap, eine Fork von UniSwap hat sich dies zunutze gemacht und gleichzeitig sogenanntes Vampire Mining betrieben, wodurch Anreize für den Wechsel auf das SushiSwap Protokoll für UniSwap-Nutzer geschaffen wurden. Resultat war ein signifikanter Liquiditätsverlust für UniSwap Pools.(vgl. Coinlist)\\
+UniSwap verwendet eine Constant Product Funktion für Pools bestehend aus zwei Token. Durch die Konvexität der Funktion ist ein Tausch mit Slippage verbunden. Arbitrage sorgt dafür, dass der Wertanteil (Gewicht) der beiden Token im Pool gleich hoch ist. Ebenso bringt Arbitrage den relativen Token-Preis in Einklang mit dem Aussenmarktpreis. Daraus ergibt sich Impermanent Loss für Liquiditätsprovider.\\
+Auf der Basis von UniSwap erweitert Balancer die Constant Product Funktion für Pools mit bis zu acht verschiedenen Token. Die resultierende Funktion nennt sich Constant Value Function und hält das Produkt der Token-Werte während einem Tausch konstant. Die beliebige Gewichtung der Pool-Token erlaubt Liquiditätsprovidern die Korrelation gegenüber einem Asset zu erhöhen, womit der Impermanent Loss reduziert wird. Bei einer 50/50 Gewichtung wie bei UniSwap wird der Impermanent Loss maximiert. Smart Pools erweitern die Flexibilität des Balancer Protokolls und erlauben einige Interessante neue Anwendungen von Liquiditätspools. \\
+Curve nutzte die Preisstabilität gewisser Kryptoassets und kombiniert die Constant Product- mit der Constant Sum Funktion. Die resultierende Hybrid-Funktion verringert den Slippage für Trades zwischen preisstabilen Assets, wie Stablecoins. Zudem sind Liquiditätsprovider nicht von Impermanent Loss betroffen. Optional gibt es Curve-Pools, welche die Liquiditäts-Token zusätzlichen DeFi Lending Protokollen hinzufügen um zusätzliche Rendite erzielen. \\
+Im Bancor Protokoll V1 halten Smart Token eine konstante Reserve von verbundenen ETH/ER20-Token und bilden somit ebenfalls einen Liquiditätspool. Smart Token können stets mit dem zugehörigen Connector-Token gekauft und verkauft werden. Der Smart Token-Preis passt sich an die Nachfrage an. % und die Preiselastizität kann nach den gewünschten Eigenschaften konfiguriert werden.
+Bancor V2 führte die Anpassung der Token-Gewichte über externe Orakel ein. Die Pool-Anreize sind so definiert, dass die Anzahl der gepoolten Token konstant bleibt und der Impermanent Loss dadurch deutlich verringert wird. Zusätzlich gibt es einen Amplifikationsmechanismus, welcher den Slippage minimieren soll. Die formale Untersuchung dieses Mechanismus war mangels Quellen nicht möglich. \\
+Front-Running und konkret Sandwich-Attacken sind ein bestehendes Problem von Constant Function Market Makern, können aber gemindert werden. %relativ einfach?
+In Zukunft wird vor allem die Sicherheit der Smart Contracts eine zentrale Bedeutung einnehmen. Fehler in der Programmierung eines Smart Contracts können verheerend sein und die weitere Adoption der Protokolle aufhalten. Diese Risiken verstärken sich bei dem Zusammenspiel mehrerer Smart Contracts. Jedoch gibt es bereits ein grosses System an Auditing Services. Ebenso ist die weitere Adoption von CFMMs abhängig von den Skalierungsmöglichkeiten der Ethereum Blockchain. Optimistic Rollups und ETH2 könnten diese Probleme lösen. \\
+%Eine interessante Erweiterung dieser Arbeit wäre ein mathematisches Modell, welches abhängig von gegebenen Parametern (wie Preisvolatilität der Pool-Assets) Effizienzaussagen für Händler und Liquiditätsprovider machen kann.
+CFMMs sind relativ neue Protokolle und die Weiterentwicklung in vollem Gange. Gleichzeitig gehören sie momentan zu den am weitesten entwickelten und populärsten DeFi-Applikationen. Von den gesamthaft 14.4 Milliarden in DeFi Applikationen eingebundenen USD, sind 3.73 Milliarden auf dezentralen Tauschbörsen. UniSwap (1.32 Mia.), Curve (939.1 Mio.), SushiSwap (892,6 Mio.), Balancer (414,3 Mio.) und Bancor (89.1 Mio.) machen gemeinsam 3.655 Milliarden (fast 98\%) aus. \footnote{Quelle: https://defipulse.com/, Stand: 4.12.2020}  \\
+Das sich bildende Netzwerk aus verschiedenen DeFi-Applikationen hat durch stetige Weiterentwicklung die Möglichkeit, ein dezentrales Finanzsystem aufzubauen, bei dem Teilnehmer unabhängig von Intermediären ihre Assets verwalten können. Dezentrale Tauschbörsen in Form von CFMMs sind ein wichtiger Schritt in diese Richtung.
+
+
+%Die Integration in weitere DeFi-Applikationen enfalten ein Netzwerk und einem Netzwerk und fördert die von einem dezentralen Finanzsystem, in dem unabhängig von Intermediären ihre Assets verwalten können.
+
+%UniSwap besitzt zu diesem Zeitpunkt den höchsten Marktanteil. (Governance, Liquidity Mining/Farming/Staking)
+
+
+%In Zukunft könnten CFMM gemäss Berenzon auch für die Preisfindung von neuen und physischen und digitalen Assets zum Einsatz kommen, wie bei Balancer Smart Pools auch schon geschehen. (Quelle)
+
+%While most constant function market makers to date have been used for secondary market trading, they could also be used to bootstrap primary market asset issuance. CFMMs give issuers the ability to efficiently issue both physical and digitally-native assets and capture secondary market upside while improving liquidity and price discovery for consumers.
+%This was pioneered by Unisocks, which created tokens that entitled holders to a physical pair of limited edition socks. 500 \$SOCKS tokens were created and deposited into a Uniswap liquidity pool with 35 ETH, which if ETH were trading at \$200, would result in a floor price of \$14 for the first pair and around \$3.5M for the 499th pair. Saint Fame further legitimized the concept by selling shirts, Zora generalized the concept by creating a marketplace for limited-edition goods, and I expect to see many more projects using CFMMs for this use-case.
+%Interestingly, this brings us back to the initial use-case of AMMs, which was information elicitation, except this time it is about the price of an asset rather than the probability of an event occurring!
+
+%Zooming-out -> Ausblick
+%Herausstreichen der Eigenleistung
+%Diskussion der Ergebnisse und Beschränkungen
+\newpage
+\section{Anhang}
+
+%%% Reference
+
+\subsection{Herleitung Balancer Spot-Preis}
+\label{sec:Herleitung Balancer Spot-Preis}
+
+Folgende Herleitung wurde von \cite{MartinelliMushegian2019} übernommen. Ausgangspunkt sind die bekannten Gleichungen:\\
+\begin{equation*}
+V = \prod B_{t}^{w_{t}}
+\end{equation*}
+\begin{equation*}
+EP_{i}^o = \dfrac{A_{i}}{A_{o}}
+\end{equation*}
+\begin{equation*}
+SP_{i}^o = \lim\limits_{A_{i}, A_{o} \to 0} EP_{i}^o = \lim\limits_{\Delta B_{o}, \Delta B_{i}\to 0} \dfrac{\Delta B_{i}}{-\Delta B_{o}}
+\end{equation*}
+Der Grenzwert des effektiven Preis ist per Definition die partielle Ableitung von $B_{i}$ nach $B_{o}$:
+\begin{equation*}
+SP_{i}^o = -\dfrac{\delta B_{i}}{\delta B_{o}}
+\end{equation*}
+Aus der Value-Funktion lässt sich $B_{i}$ isolieren:
+\begin{equation*}
+B_{i}^{w_{i}} = \dfrac{V}{(\prod_{k\neq i,o}B_{k}^{w_{k}})\cdot B_{o}^{w_{o}}}
+\end{equation*}
+\begin{equation*}
+B_{i} = \Biggl(\dfrac{V}{(\prod_{k\neq i,o}B_{k}^{w_{k}})\cdot B_{o}^{w_{o}}}\Biggr)^{1/w_{i}}
+\end{equation*}
+Es folgt die partielle Ableitung von $B_{i}$ nach $B_{o}$:
+\begin{equation*}
+SP_{i}^o = -\dfrac{\delta B_{i}}{\delta B_{o}} = -\dfrac{\delta}{\delta B_{o}}\Biggl(\Biggl(\dfrac{V}{(\prod_{k\neq i,o}(B_{k})^{w_{k}})\cdot (B_{o})^{w_{o}}}\Biggr)^{1/w_{i}}\Biggr) =
+\end{equation*}
+\begin{equation*}
+- \Biggl(\dfrac{V}{\prod_{k\neq i,o}B_{k}^{w_{k}}}\Biggr)^{1/w_{i}}\cdot\dfrac{\delta}{\delta B_{o}} \Biggl( B_{o}^{-\tfrac{w_{o}}{w_{i}}}\Biggr)=
+\end{equation*}
+\begin{equation*}
+- \Biggl(\dfrac{V}{\prod_{k\neq i,o}B_{k}^{w_{k}}}\Biggr)^{1/w_{i}}\cdot -\dfrac{w_{o}}{w_{i}}\cdot B_{o}^{-\tfrac{w_{o}}{w_{i}}-1}=
+\end{equation*}
+\begin{equation*}
+\Biggl(\dfrac{V}{\prod_{k}B_{k}^{w_{k}}}\Biggr)^{1/w_{i}}\cdot B_{o}^{\tfrac{w_{o}}{w_{i}}}\cdot B_{i}\cdot \dfrac{w_{o}}{w_{i}}\cdot B_{o}^{-\tfrac{w_{o}}{w_{i}}-1}=
+\end{equation*}
+\begin{equation*}
+\Biggl(\dfrac{V}{V}\Biggr)^{\tfrac{1}{w_{i}}}\cdot B_{o}^{\tfrac{w_{o}}{w_{i}}}\cdot B_{o}^{-\tfrac{w_{o}}{w_{i}}}\cdot\dfrac{B_{i}}{w_{i}}\cdot \dfrac{w_{o}}{B_{o}} = \dfrac{\tfrac{B_{i}}{W_{i}}}{\tfrac{B_{o}}{w_{o}}}
+\end{equation*}
+\\
+
+\subsection{Balancer Tausch-Formel}
+\label{sec:Balancer Tausch-Formel}
+
+Die Value Funktion vor und nach einem Trade muss gleich sein, daher kann man schreiben:\\
+\begin{equation*}
+\prod_{k}(B_{k})^{w_{k}} = \prod_{k \neq i,o}(B_{k})^{w_{k}}\cdot (B_{o}-A_{o})^{w_{o}}\cdot(B_{i}+A_{i})^{w_{i}}
+\end{equation*}
+\begin{equation*}
+\prod_{k \neq i,o}(B_{k})^{w_{k}}\cdot B_{o}^{w_{o}} \cdot B_{i}^{w_{i}} = \prod_{k \neq i,o}(B_{k})^{w_{k}}\cdot (B_{o}-A_{o})^{w_{o}}\cdot(B_{i}+A_{i})^{w_{i}}
+\end{equation*}
+\begin{equation*}
+B_{o}^{w_{o}} \cdot B_{i}^{w_{i}} = (B_{o}-A_{o})^{w_{o}}\cdot(B_{i}+A_{i})^{w_{i}}
+\end{equation*}
+\begin{equation*}
+B_{o}- A_{o} = \dfrac{B_{i}^{\tfrac{w_{i}}{w_{o}}}\cdot B_{o}}{(B_{i}+A_{i})^{\tfrac{w_{i}}{w_{o}}}}
+\end{equation*}
+\begin{equation*}
+A_{o}= B_{o}\cdot \Biggl( 1 - \biggl(\dfrac{B_{i}}{B_{i}+A_{i}}\biggr)^{\tfrac{w_{i}}{w_{o}}}\Biggr)
+\end{equation*}
+
+\subsection{Bancor Tausch-Formel}
+\label{sec:Bancor Tausch-Formel}
+
+Die Herleitung der folgenden Formeln wurde von \citet[S.1f.]{Rosenfeld2017} übernommen. Ausgangspunkt ist die Bancor-Gleichung:\\
+\begin{equation*}
+R = FSP
+\end{equation*}
+Nutzer kauft indefinitesimale Anzahl Smart Token $dS$ und bezahlt dafür $P\cdot dS$.
+\begin{equation*}
+P dS = dR = d(FSP) = F(S dP+ P dS)
+\end{equation*}
+\begin{equation*}
+P dS(1-F) = FS dP
+\end{equation*}
+\begin{equation*}
+P dS(\dfrac{1}{F}-1) = S dP
+\end{equation*}
+Rosenfeld definiert $(\dfrac{1}{F}-1)= \alpha$
+\begin{equation*}
+P dS \alpha = S dP
+\end{equation*}
+\begin{equation*}
+\alpha \dfrac{dS}{S} = \dfrac{dP}{P}
+\end{equation*}
+\begin{equation*}
+\alpha d logS = d logP
+\end{equation*}
+\begin{equation*}
+\alpha log S + A = log P
+\end{equation*}
+\begin{equation*}
+e^A S^\alpha = P
+\end{equation*}
+\begin{equation*}
+P = \biggl(\dfrac{S}{S_{0}}\biggr)^\alpha P_{0} 
+\end{equation*}\\
+Damit lässt sich Anzahl Token $E$, welche ein Nutzer für eine bestimmte Anzahl Smart Token $T$ senden muss, herleiten:\\
+\begin{align*}
+E  &= \int_{S_{0}}^{S_{0}+T} P dS = \int_{S_{0}}^{S_{0}+T} P_{0}(S/S_{0})^{\alpha}P_{0} = \\
+&= P_{0}S_{0}\dfrac{(S/S_{0})^{\alpha + 1}}{\alpha + 1}\mid_{S_{0}}^{S_{0}+T} = P_{0}S_{0} \Biggl(\dfrac{((S_{0}+T)/S_{0})^{\alpha +1}}{\alpha + 1} - \dfrac{(S_{0}/S_{0})^{\alpha + 1}}{\alpha + 1}\Biggr) = \\
+&= \dfrac{P_{0}S_{0}}{\alpha + 1}\Biggl(\biggl(1 + \dfrac{T}{S_{0}}\biggr)^{\alpha + 1} -1\Biggr) = FP_{0}S_{0}\Biggl(\biggl(1 + \dfrac{T}{S_{0}}\biggr)^{1/F} -1\Biggr) = \\
+&= R_{0}\Biggl(\biggl(1 + \dfrac{T}{S_{0}}\biggr)^{1/F} -1\Biggr) = R_{0}\Biggl( \sqrt[F]{1+\dfrac{T}{S_{0}}} -1 \Biggr) \\
+\end{align*}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Literaturverzeichnis %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+\setcounter{page}{1}
+\pagenumbering{roman}
+\onehalfspacing
+\addcontentsline{toc}{section}{References}
+\bibliography{Literatur}
+\bibliographystyle{agsm}
+
+\newpage
+\listoffigures
+\listoftables
+
+
+%\section{Appendix}
+\end{document}
+
+%\textbf{Beispiele}\\
+%Ausgangsituation\\
+ 	%ETH Pool = 10 \\
+	%ERC20 Pool = 100 \\
+	%Konstante = 10 * 100 = 1000 \\
+	
+%Handel mit UniSwap Gebühr\\
+	%Nutzer sendet 1 ETH an den Exchange-Kontrakt \\
+	%ETH Pool = 10+ (1-0.003) 1 = 10.997  \\
+	%ERC20 Pool = 1000/10.997 = 90.934 \\
+	%ERC20 erhalten = 100 - 90.934 = 9.066\\
+	
+%nach Trade\\
+	%ETH Pool neu = 10.997 + 0.003 = 11 \\
+	%ERC20 Pool = 90.934 \\
+	%neue Konstante = 11 * 90.934 = 1000.273 \\
+		
+%Preise \\
+	%ERC20 Spot-Preis vor Trade: 10 / 100 = 0.1 ETH  \\
+	%ERC20 Spot-Preis nach Trade: 11 / 90.90909 = 0.121 ETH\\
+	%effektiver ERC20 Preis bei Trade: 1 / 9.066 = 0.11 ETH \\
+
+%Beispiel:
+%ERC20 Spot-Preis vor Trade = 10 / 100 = 0.1 ETH
+%ERC20 Spot-Preis nach Trade = 20 / 50 = 0.4 ETH
+%effektiver ERC20 Preis bei Trade = 10 / 50 = 0.2 ETH
+%Prämie= 0.2 - 0.1 = 0.1 ETH
+
+%Formel für die erhaltenen Token:
+%\begin{equation}
+%-\Delta x = x * \dfrac{LT_{i}}{LT}
+%\end{equation}
+%\begin{equation}
+%-\Delta y = y * \dfrac{LT_{i}}{LT}
+%\end{equation}
+
+%Die Anzahl der $y$ Token, die ein Liquiditätsprovider im Pool hinterlegen muss berechnet sich durch: 
+%\begin{equation}
+%\Delta B = B *\dfrac{\Delta A}{A}
+%\end{equation}
+
+%Formel für Abzug der Mittel
+%eth/tokens withdrawn = ethpool/tokenpool * \dfrac{amountburned}{total amount}
+%tokenswithdrawn = tokenpool * \dfrac{amountburned}{totalamount}
